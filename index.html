@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Kepler-7</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Atkinson+Hyperlegible+Mono:wght@500;700&family=Pixelify+Sans:wght@500;700&display=swap" rel="stylesheet">
+<style>
+/* VOICE: gioco cozy in pixel art, caldo e invitante anche se la nave è in avaria
+   IDEA: quattro moduli di un'astronave visti dall'alto in 3/4, fino al boss sul ponte di comando
+   PICTURE: le stanze (canvas pixel art), con primi piani vettoriali grandi e leggibili per i problemi
+   COLOUR and TYPE: metalli e legno, interfaccia crema/legno; Pixelify Sans per titoli, Atkinson Hyperlegible per testi e numeri
+   LAYOUT: titolo piccolo, gioco grande, stato sotto; finestre dei problemi sopra a tutto */
+:root{color-scheme:dark;--ink:#3b2412;--cream:#f6e3b4;--wood:#5b3418;--wood2:#d99a4e;--px:"Pixelify Sans",system-ui,sans-serif;--rd:"Atkinson Hyperlegible",system-ui,sans-serif;--mono:"Atkinson Hyperlegible Mono",ui-monospace,monospace}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;min-height:100vh;color:#e8e6f5;font:17px/1.5 var(--rd);overflow-x:clip;
+background:radial-gradient(1px 1px at 12% 20%,#fff 50%,transparent 51%),radial-gradient(1px 1px at 78% 12%,#f2c14e 50%,transparent 51%),radial-gradient(1px 1px at 40% 70%,#fff 50%,transparent 51%),radial-gradient(1px 1px at 90% 60%,#fff 50%,transparent 51%),radial-gradient(1px 1px at 22% 88%,#6fe3f0 50%,transparent 51%),#0b0d1f}
+.wrap{max-width:1000px;margin:0 auto;padding:clamp(14px,3vw,32px) 12px 40px}
+.title{font:700 clamp(28px,4.4vw,44px)/1.05 var(--px);margin:0;color:var(--cream)}
+.sub{margin:4px 0 16px;color:#a9acd0}
+.frame{background:var(--wood);padding:6px;border-radius:8px;box-shadow:inset 0 0 0 2px #8a4f25,0 8px 0 #2a170a,0 16px 34px rgba(0,0,0,.5)}
+.stage{position:relative;border:3px solid #c47a3a;border-radius:4px;overflow:hidden;background:#000}
+#game{display:block;width:100%;height:auto;image-rendering:pixelated;image-rendering:crisp-edges;cursor:pointer;touch-action:manipulation}
+.hud{display:flex;flex-wrap:wrap;gap:8px;padding:9px 2px 3px;align-items:center}
+.chip{background:var(--cream);color:var(--ink);border:3px solid #8a4f25;border-radius:4px;padding:2px 10px;font-size:15px;white-space:nowrap;font-family:var(--rd)}
+.chip b{font-weight:700}
+button.chip{cursor:pointer;min-height:34px;background:#e9b96e}
+.chip.near{margin-left:auto}
+.help{color:#a9acd0;font-size:15px;margin:14px 2px 0}
+.dlg{position:absolute;left:2.5%;right:2.5%;bottom:3.5%;background:var(--cream);color:var(--ink);border:4px solid var(--wood);border-radius:6px;box-shadow:inset 0 0 0 3px var(--wood2),0 4px 0 rgba(0,0,0,.35);padding:clamp(14px,2.2vw,22px) clamp(14px,2.4vw,24px) clamp(10px,1.6vw,16px);font-size:clamp(15px,2.2vw,21px);line-height:1.4;cursor:pointer;min-height:27%}
+.dlg p{margin:0;padding-right:18px}
+.who{position:absolute;top:-17px;left:14px;background:#e9b96e;border:3px solid var(--wood);padding:0 10px;font:700 15px var(--px);border-radius:4px}
+.who.orbis{background:#c0392b;color:#fff}
+.more{position:absolute;right:12px;bottom:6px;font-size:14px;animation:bob .7s infinite alternate}
+@keyframes bob{to{transform:translateY(3px)}}
+.n{font-weight:700;white-space:nowrap;background:#fff3cf;color:#7a2e10;padding:0 4px;border-radius:4px;box-shadow:inset 0 -2px 0 #f0c98a}
+.cover{position:absolute;inset:0;display:grid;place-items:center;background:rgba(5,6,18,.55);padding:10px}
+.modal{position:fixed;inset:0;background:rgba(5,6,18,.74);display:grid;place-items:center;padding:12px;z-index:10;overflow:auto}
+[hidden]{display:none!important}
+.box{background:var(--cream);color:var(--ink);border:5px solid var(--wood);border-radius:8px;box-shadow:inset 0 0 0 4px var(--wood2),0 8px 0 #2a170a;padding:22px clamp(14px,3vw,26px);max-width:860px;width:100%;position:relative}
+.box.small{max-width:440px;text-align:center}
+.box h2{margin:0 0 14px;font:700 clamp(24px,3.4vw,32px)/1.05 var(--px);padding-right:100px}
+.box.small h2{padding:0}
+.box p{margin:0 0 10px}
+.pzgrid{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:22px;align-items:start}
+@media(max-width:700px){.pzgrid{grid-template-columns:minmax(0,1fr)}.chip.near{margin-left:0}}
+.pztext{font-size:18px;line-height:1.55}
+.figbox{background:#fbf0d2;border:3px solid #8a4f25;border-radius:6px;padding:6px}
+.figbox svg{display:block;width:100%;height:auto}
+.figbox svg text{font-family:var(--rd)}
+.notes{background:#fff8e4;border:2px dashed #b8733a;border-radius:6px;padding:8px 12px;margin-top:12px;font-size:16px}
+.notes h3{margin:0 0 4px;font:700 16px var(--px)}
+.notes ul{margin:0;padding-left:18px}.notes li{margin:2px 0}
+.notes .miss{font-style:italic;color:#8a4f25;margin:2px 0 0}
+.screen{background:#10202a;color:#6fe3f0;border:3px solid #2b2d4a;border-radius:4px;font:700 36px/1.2 var(--mono);padding:4px 12px;display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin:8px 0 4px;box-shadow:inset 0 0 14px rgba(111,227,240,.25)}
+.screen small{font:500 19px var(--rd);opacity:.85;white-space:nowrap}
+.screen.ok{color:#7cf08a}.screen.bad{color:#ff7a6b}
+.msg{min-height:1.5em;margin:4px 0 8px!important;font-size:16px}
+.msg.good{color:#2f7d3a;font-weight:700}.msg.bad{color:#a32e24}
+.keys{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.btn{font:600 20px var(--px);min-height:46px;background:#e9b96e;color:var(--ink);border:3px solid var(--wood);border-radius:5px;box-shadow:0 3px 0 var(--wood);cursor:pointer;padding:0 14px}
+.keys .btn{font:700 24px var(--mono)}
+.keys .btn.go{font:600 20px var(--px);grid-column:1/-1;background:#8fc96b}
+.btn:active{transform:translateY(2px);box-shadow:0 1px 0 var(--wood)}
+.btn:focus-visible,.chip:focus-visible{outline:3px solid #6fe3f0;outline-offset:2px}
+.btn.x{position:absolute;top:14px;right:14px;font-size:16px;min-height:40px}
+.shake{animation:sh .3s}
+@keyframes sh{25%{transform:translateX(-7px)}75%{transform:translateX(7px)}}
+.big{font-size:clamp(34px,6vw,52px)!important}
+.stars{font-size:46px;letter-spacing:6px;color:#e0a526;text-shadow:0 3px 0 #8a4f25;margin:0 0 6px}
+.stars .off{color:#cdb98d;text-shadow:none}
+@media (prefers-reduced-motion:reduce){.more,.shake{animation:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1 class="title">Kepler-7</h1>
+  <p class="sub">Escape room spaziale · teorema di Pitagora e poligoni regolari · seconda media</p>
+
+  <div class="frame">
+    <div class="stage">
+      <canvas id="game" width="320" height="192" aria-label="Stanza dell'astronave vista dall'alto"></canvas>
+      <div id="dlg" class="dlg" hidden><div class="who" id="who"></div><p id="dtext"></p><span class="more">▼</span></div>
+      <div id="start" class="cover">
+        <div class="box small">
+          <h2 class="big">Kepler-7</h2>
+          <p>Quattro moduli in avaria, un’IA impazzita sul ponte di comando.</p>
+          <button id="go" class="btn" type="button">Inizia la missione</button>
+        </div>
+      </div>
+    </div>
+    <div class="hud">
+      <span class="chip" id="hR">Stanza 1/4</span>
+      <span class="chip" id="hG">Guasti 0/2</span>
+      <span class="chip">Errori: <b id="hE">0</b></span>
+      <span class="chip">Tempo: <b id="hT">0:00</b></span>
+      <button class="chip" id="hNotes" type="button">Taccuino (0)</button>
+      <span class="chip near" id="hN">Esplora la stanza</span>
+    </div>
+  </div>
+  <p class="help">Frecce o WASD per muoverti, E o spazio per interagire. Con mouse o LIM: tocca il pavimento per camminare e gli oggetti per esaminarli. I dati trovati finiscono nel taccuino.</p>
+</div>
+
+<div id="pz" class="modal" hidden>
+  <div class="box" id="pzBox" role="dialog" aria-modal="true" aria-labelledby="pzTitle">
+    <h2 id="pzTitle"></h2>
+    <button class="btn x" id="pzClose" type="button">Chiudi</button>
+    <div class="pzgrid">
+      <div><div class="figbox" id="pzFig"></div><div class="notes" id="pzNotes"></div></div>
+      <div>
+        <p id="pzText" class="pztext"></p>
+        <div class="screen" id="scr"><span id="pzVal">_</span><small id="pzUnit"></small></div>
+        <p id="pzMsg" class="msg" aria-live="polite"></p>
+        <div class="keys" id="keys"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="nb" class="modal" hidden>
+  <div class="box small" style="text-align:left">
+    <h2>Taccuino</h2>
+    <div id="nbList"></div>
+    <p style="margin-top:14px"><button class="btn" id="nbClose" type="button">Chiudi</button></p>
+  </div>
+</div>
+
+<div id="win" class="modal" hidden>
+  <div class="box small">
+    <h2 class="big">Missione compiuta!</h2>
+    <p class="stars" id="winStars"></p>
+    <p>La Kepler-7 ha attraversato il portale. L’equipaggio è salvo.</p>
+    <p id="winStats"></p>
+    <button class="btn" id="again" type="button">Rigioca</button>
+  </div>
+</div>
+
+<script>
+{
+const $=id=>document.getElementById(id);
+const cv=$('game'),ctx=cv.getContext('2d');
+const W=320,H=192;
+const mk=(w,h)=>{const c=document.createElement('canvas');c.width=w;c.height=h;return c};
+const spr=(w,h,f)=>{const c=mk(w,h);f(c.getContext('2d'));return c};
+const R=(c,x,y,w,h,col)=>{c.fillStyle=col;c.fillRect(Math.round(x),Math.round(y),w,h)};
+const hs=(a,b)=>{let h=(a*374761393+b*668265263)|0;h=Math.imul(h^(h>>>13),1274126177);return((h^(h>>>16))>>>0)/4294967295};
+const oct=(c,x,y,s,cut,col)=>{for(let i=0;i<s;i++){const n=Math.max(0,cut-i,i-(s-1-cut));R(c,x+n,y+i,s-2*n,1,col)}};
+const hex=(c,cx,cy,s,col)=>{const h=Math.round(s*0.866);for(let dy=-h;dy<=h;dy++){const hw=Math.round(s-Math.abs(dy)/h*s/2);R(c,cx-hw,cy+dy,hw*2,1,col)}};
+const circ=(c,cx,cy,r,col)=>{for(let dy=-r;dy<=r;dy++){const hw=Math.round(Math.sqrt(r*r-dy*dy));R(c,cx-hw,cy+dy,hw*2,1,col)}};
+const ngon=(cx,cy,r,n,rot)=>Array.from({length:n},(_,k)=>{const a=rot+k*2*Math.PI/n;return[cx+r*Math.cos(a),cy+r*Math.sin(a)]});
+const inside=(x,y,p)=>{let o=false;for(let i=0,j=p.length-1;i<p.length;j=i++){const[xi,yi]=p[i],[xj,yj]=p[j];if((yi>y)!==(yj>y)&&x<(xj-xi)*(y-yi)/(yj-yi)+xi)o=!o}return o};
+const poly=(c,p,col)=>{const xs=p.map(q=>q[0]),ys=p.map(q=>q[1]);for(let y=Math.floor(Math.min(...ys));y<=Math.ceil(Math.max(...ys));y++)for(let x=Math.floor(Math.min(...xs));x<=Math.ceil(Math.max(...xs));x++)if(inside(x+.5,y+.5,p))R(c,x,y,1,1,col)};
+const ring=(c,p1,p2)=>{const out=[],xs=p1.map(q=>q[0]),ys=p1.map(q=>q[1]);for(let y=Math.floor(Math.min(...ys));y<=Math.ceil(Math.max(...ys));y++)for(let x=Math.floor(Math.min(...xs));x<=Math.ceil(Math.max(...xs));x++)if(inside(x+.5,y+.5,p1)&&!inside(x+.5,y+.5,p2))out.push([x,y]);return out};
+
+/* ---------- basi comuni ---------- */
+function base(b,P){
+ R(b,0,0,W,48,P.w);R(b,0,0,W,4,'#1a1b30');R(b,0,4,W,2,P.wl);
+ for(let x=0;x<W;x+=32){R(b,x,6,1,34,P.wd);R(b,x+1,6,1,34,P.wl)}
+ R(b,0,24,W,1,P.wd);R(b,0,25,W,1,P.wl);
+ for(let x=0;x<W;x+=8){R(b,x,40,4,4,'#f2c14e');R(b,x+4,40,4,4,'#2b2d4a')}
+ R(b,0,44,W,4,'#1d1e33');
+ P.floor(b);
+ b.fillStyle='rgba(10,10,30,.35)';b.fillRect(16,48,288,3);
+ R(b,0,48,16,144,'#1d1e33');R(b,12,48,4,128,P.w);R(b,304,48,16,144,'#1d1e33');R(b,304,48,4,128,P.w);
+ R(b,0,176,W,16,'#1d1e33');R(b,16,176,288,3,P.w)}
+const fMetal=b=>{for(let ty=3;ty<11;ty++)for(let tx=1;tx<19;tx++){const x=tx*16,y=ty*16;
+ R(b,x,y,16,16,'#7a7f9a');R(b,x,y,16,1,'#8e93ad');R(b,x,y,1,16,'#8e93ad');R(b,x,y+15,16,1,'#5f637c');R(b,x+15,y,1,16,'#5f637c');
+ for(const[dx,dy]of[[2,2],[13,2],[2,13],[13,13]])R(b,x+dx,y+dy,1,1,'#b5b9cc');if(hs(tx,ty)>.78)R(b,x+4+((hs(ty,tx)*6)|0),y+7,3,1,'#6c718b')}};
+const fWood=b=>{for(let y=48,r=0;y<176;y+=8,r++){const off=(r%2)*24;R(b,16,y,288,8,'#a0703f');R(b,16,y,288,1,'#b98a52');R(b,16,y+7,288,1,'#7a5230');
+ for(let x=16-off;x<304;x+=48){R(b,x,y,1,8,'#7a5230');R(b,x+3,y+3,1,1,'#5b3a22');R(b,x+44,y+3,1,1,'#5b3a22')}
+ for(let i=0;i<10;i++)R(b,16+hs(r,i)*280,y+2+((hs(i,r)*4)|0),4,1,'#916337')}};
+const fGrate=b=>{for(let ty=3;ty<11;ty++)for(let tx=1;tx<19;tx++){const x=tx*16,y=ty*16;R(b,x,y,16,16,'#4b4f5e');R(b,x,y,16,1,'#626778');R(b,x,y,1,16,'#626778');
+ for(let i=3;i<14;i+=4)for(let j=3;j<14;j+=4)R(b,x+i,y+j,2,2,'#2e313b')}};
+const fCarpet=b=>{R(b,16,48,288,128,'#3d4270');for(let y=50;y<176;y+=4)R(b,16,y,288,1,'#444a7c');
+ R(b,136,48,48,128,'#7a2e3a');R(b,136,48,2,128,'#d9a84e');R(b,182,48,2,128,'#d9a84e');for(let y=54;y<176;y+=12)R(b,158,y,4,4,'#a8434f')};
+const desk=spr(32,20,c=>{R(c,0,0,32,20,'#1a1b30');R(c,1,1,30,6,'#6b6f8f');R(c,1,1,30,1,'#8e93ad');for(let i=0;i<8;i++)R(c,4+i*3,3,2,2,'#3e4170');
+ R(c,1,7,30,12,'#3e4170');R(c,1,7,30,1,'#23243d');R(c,4,11,10,1,'#565a92');R(c,18,11,10,1,'#565a92');R(c,4,15,10,1,'#565a92');R(c,18,15,10,1,'#565a92')});
+const plant=spr(16,22,c=>{R(c,3,14,10,8,'#5b3418');R(c,4,14,8,7,'#c0603a');R(c,3,14,10,2,'#d9774a');R(c,7,3,2,11,'#3d7a34');R(c,2,5,5,3,'#5aa84a');R(c,9,4,5,3,'#5aa84a');R(c,1,9,6,3,'#5aa84a');R(c,9,9,6,3,'#5aa84a');R(c,6,0,4,3,'#7cc865')});
+const vig=spr(W,H,c=>{const g=c.createRadialGradient(160,104,70,160,104,215);g.addColorStop(0,'rgba(5,5,20,0)');g.addColorStop(1,'rgba(5,5,20,.6)');c.fillStyle=g;c.fillRect(0,0,W,H)});
+const port=(b,x)=>{oct(b,x,8,26,8,'#1a1b30');oct(b,x+1,9,24,7,'#b5b9cc');oct(b,x+3,11,20,6,'#565a92');oct(b,x+4,12,18,5,'#0b0e24');for(let i=0;i<6;i++)R(b,x+6+((hs(x,i)*13)|0),14+((hs(i,x)*12)|0),1,1,i%3?'#fff':'#f2c14e')};
+
+/* ---------- stanza 1: alloggi ---------- */
+const bat=spr(32,36,c=>{R(c,6,0,6,5,'#1a1b30');R(c,7,1,4,4,'#c0392b');R(c,20,0,6,5,'#1a1b30');R(c,21,1,4,4,'#2b2d4a');R(c,0,4,32,32,'#1a1b30');R(c,1,5,30,30,'#4a4e6e');R(c,1,5,30,9,'#6b6f8f');R(c,1,5,30,1,'#8e93ad');R(c,1,14,30,1,'#2b2d4a');
+ R(c,16,16,4,2,'#f2c14e');R(c,14,18,4,2,'#f2c14e');R(c,12,20,8,2,'#f2c14e');R(c,15,22,3,2,'#f2c14e');R(c,13,24,3,3,'#f2c14e');for(let x=2;x<30;x+=4)R(c,x,31,2,3,'#f2c14e')});
+const crates=spr(32,32,c=>{const cr=(x,y)=>{R(c,x,y,16,16,'#3b2412');R(c,x+1,y+1,14,14,'#b8733a');R(c,x+1,y+1,14,1,'#d99a4e');R(c,x+1,y+5,14,1,'#8a4f25');R(c,x+1,y+10,14,1,'#8a4f25');R(c,x+1,y+14,14,1,'#8a4f25')};cr(0,16);cr(16,16);cr(16,0);R(c,4,23,7,4,'#f6e3b4');R(c,5,24,5,1,'#8a4f25')});
+const cablePts=(()=>{const p=[];let x0=63,y0=150;const x1=293,y1=50,dx=x1-x0,dy=-(y0-y1);let e=dx+dy;for(;;){p.push([x0,y0]);if(x0===x1&&y0===y1)break;const e2=2*e;if(e2>=dy){e+=dy;x0++}if(e2<=dx){e+=dx;y0--}}return p})();
+const R1={name:'Alloggi',spawn:[100,104],door:true,pz:['cable','hatch'],notes:['perim','plate'],
+ pal:{w:'#3e4170',wl:'#565a92',wd:'#2b2d4a',floor:fMetal},
+ decor(b){port(b,26);port(b,90);for(let dy=-4;dy<=4;dy++)for(let dx=-4;dx<=4;dx++)if(dx*dx+dy*dy<=16)R(b,107+dx,24+dy,1,1,dx+dy<-2?'#f4b27a':'#e0884a');
+  R(b,134,9,28,26,'#8a4f25');R(b,135,10,26,24,'#f6e3b4');R(b,141,22,8,8,'#6fa8dc');R(b,149,14,8,8,'#8fc96b');for(let i=0;i<8;i++)R(b,141+i,21-i,1,1,'#c0603a');
+  R(b,174,8,36,30,'#1a1b30');R(b,176,10,32,26,'#565a92');R(b,178,12,28,22,'#0f2f3a');
+  R(b,56,82,64,36,'#8a3b2e');R(b,58,84,60,32,'#c0603a');R(b,62,88,52,1,'#e9b96e');R(b,62,111,52,1,'#e9b96e');oct(b,80,92,16,5,'#e9b96e');oct(b,82,94,12,4,'#8a3b2e');for(let x=57;x<119;x+=2){R(b,x,80,1,2,'#e9b96e');R(b,x,118,1,2,'#e9b96e')}
+  hex(b,160,112,22,'#1a1b30');hex(b,160,112,21,'#f2c14e');hex(b,160,112,18,'#1a1b30');hex(b,160,112,17,'#8e93ad');hex(b,160,112,14,'#6b6f8f');R(b,148,111,24,2,'#565a92');R(b,159,101,2,22,'#565a92');oct(b,155,107,10,3,'#565a92');
+  for(let i=0;i<11;i++)R(b,164+i,104+Math.floor(i*.9)+(i%2),1,1,'#1a1b30')},
+ blocks:[[176,44,32,20],[32,142,32,34],[256,146,32,30],[16,50,16,14]],
+ objs:[{id:'term',name:'Terminale',r:[174,8,36,56],act(){note('perim','Terminale','Pianta del modulo: lunghezza 12 m, perimetro 34 m.',[['Terminale','Stato: '+(S.solved.cable?'energia OK':'energia ASSENTE')+', '+(S.solved.hatch?'portello sigillato.':'perdita d’aria dal portello.')]])}},
+  {id:'crates',name:'Casse',r:[256,144,32,32],act(){note('plate','Cassa','Piastre di riparazione: ognuna copre 40 dm².')}},
+  {id:'cable',name:'Batteria e cavo',r:[32,140,56,36],act(){S.solved.cable?say([['MIRA','Il cavo è collegato: l’energia arriva alla porta.']]):openPz('cable')}},
+  {id:'hatch',name:'Portello esagonale',r:[138,93,44,38],act(){S.solved.hatch?say([['MIRA','Le piastre reggono. Niente più perdite.']]):openPz('hatch')}}],
+ tall(){return[{y:64,d:()=>ctx.drawImage(desk,176,44)},{y:64,d:()=>ctx.drawImage(plant,16,42)},{y:176,d:()=>ctx.drawImage(bat,32,140)},{y:176,d:()=>ctx.drawImage(crates,256,144)}]},
+ wallDyn(){const p=S.solved.cable;[18,22,12,20].forEach((w,i)=>R(ctx,180,14+i*5,w,2,!p&&i===0?(Math.sin(t*6)>0?'#ff5a4a':'#5a1a1a'):'#6fe3f0'));
+  R(ctx,223,5,12,7,'#1a1b30');R(ctx,224,6,10,5,!p?(Math.sin(t*8)>0?'#ff5a4a':'#7a1d18'):'#4fd16a')},
+ floorDyn(){if(S.solved.hatch){hex(ctx,160,112,15,'#5b3418');hex(ctx,160,112,14,'#d89a3a');R(ctx,147,111,26,1,'#8a4f25');R(ctx,159,100,1,24,'#8a4f25');hex(ctx,160,111,5,'#e9b96e')}
+  const Y='#f2c14e',D='#3b2412';
+  if(S.solved.cable){for(const[x,y]of cablePts)R(ctx,x,y+1,1,2,D);for(const[x,y]of cablePts)R(ctx,x,y,1,2,Y);R(ctx,293,31,2,20,D);R(ctx,292,31,2,20,Y);return}
+  const rg=(x,y,w,h,c)=>{R(ctx,x+1,y,w-2,1,c);R(ctx,x+1,y+h-1,w-2,1,c);R(ctx,x,y+1,1,h-2,c);R(ctx,x+w-1,y+1,1,h-2,c)};
+  for(const[a,b]of[[66,163],[68,161],[67,165]]){rg(a,b+1,14,8,D);rg(a,b,14,8,Y)}R(ctx,63,167,4,1,Y);R(ctx,80,160,5,1,Y);R(ctx,84,158,2,3,'#c0392b')},
+ tick(dt){if(!S.solved.hatch)emit(dt,.06,()=>addP(160+(Math.random()-.5)*28,112+(Math.random()-.5)*20,(Math.random()-.5)*12,-14-Math.random()*12,1.2,'#e6f2ff',0,2));
+  if(!S.solved.cable&&Math.random()<dt*1.4)for(let i=0;i<6;i++)addP(86,159,(Math.random()-.5)*60,-15-Math.random()*35,.35,'#f9e27a',90,1)},
+ ambient(){if(!S.solved.cable){ctx.fillStyle=`rgba(150,10,40,${(.16+.08*Math.sin(t*4)).toFixed(3)})`;ctx.fillRect(0,0,W,H)}},
+ intro:[['MIRA','Sveglia, cadetto! Sono MIRA, l’intelligenza artificiale della Kepler-7.'],['MIRA','Un meteorite ci ha colpiti. Dobbiamo raggiungere il ponte di comando: è tre moduli più avanti.'],
+  ['MIRA','Frecce o WASD per muoverti, E per interagire. Puoi anche toccare il pavimento e gli oggetti.'],['MIRA','Esamina tutto: i dati utili finiscono nel taccuino e ti serviranno per i calcoli.']]};
+
+/* ---------- stanza 2: serra ---------- */
+const tank=spr(32,62,c=>{R(c,1,4,30,58,'#1a2a30');R(c,2,5,28,56,'#4f8fa0');R(c,2,5,6,56,'#6fb3c4');R(c,24,5,6,56,'#3d7383');for(const y of[18,36,52])R(c,2,y,28,2,'#2f5a66');R(c,0,2,32,4,'#2f5a66');R(c,2,1,28,2,'#8fd0e0');R(c,12,24,8,8,'#1a2a30');R(c,13,25,6,6,'#e8f6f8');R(c,16,26,1,3,'#c0392b')});
+const table=spr(32,20,c=>{R(c,0,0,32,8,'#5b3418');R(c,1,1,30,6,'#d99a4e');R(c,1,1,30,1,'#e9b96e');R(c,2,8,3,12,'#5b3418');R(c,27,8,3,12,'#5b3418');R(c,9,2,13,4,'#1a1b30');R(c,10,3,11,2,'#7cf08a');R(c,24,1,5,5,'#6fa8dc');R(c,25,0,3,1,'#6fa8dc')});
+const flowers=spr(34,30,c=>{for(const x of[2,18]){R(c,x+2,20,12,10,'#5b3418');R(c,x+3,20,10,9,'#c0603a');R(c,x+7,6,2,14,'#3d7a34');R(c,x+3,12,4,2,'#5aa84a');R(c,x+9,9,4,2,'#5aa84a');circ(c,x+8,5,4,'#f2c14e');circ(c,x+8,5,2,'#8a4f25')}});
+const beds=[[120,100],[196,108],[148,150]].map(([x,y])=>({x,y,p:ngon(x,y,17,5,-Math.PI/2),rim:ring(null,ngon(x,y,19.5,5,-Math.PI/2),ngon(x,y,16.5,5,-Math.PI/2))}));
+const R2={name:'Serra',spawn:[70,124],door:true,pz:['ladder','pent'],notes:['ladder','pent'],
+ pal:{w:'#3f5e52',wl:'#56806f',wd:'#2a4038',floor:fWood},
+ decor(b){R(b,44,14,8,4,'#8e93ad');R(b,58,14,12,4,'#8e93ad');R(b,66,4,4,12,'#8e93ad');R(b,44,14,26,1,'#b5b9cc');
+  R(b,104,8,2,4,'#1a1b30');R(b,134,8,2,4,'#1a1b30');R(b,100,12,40,2,'#b8733a');R(b,100,26,40,2,'#b8733a');for(let x=102;x<139;x+=6)R(b,x,14,2,12,'#d99a4e');R(b,115,16,10,7,'#f6e3b4');R(b,117,18,6,1,'#8a4f25');R(b,117,20,4,1,'#8a4f25');
+  R(b,160,6,90,3,'#1a1b30');R(b,161,7,88,1,'#e6a3e8');b.fillStyle='rgba(230,163,232,.13)';b.fillRect(158,9,94,31);
+  for(const x of[170,198,226]){R(b,x,30,10,7,'#5b3418');R(b,x+1,30,8,6,'#c0603a');R(b,x+2,24,2,6,'#5aa84a');R(b,x+5,22,2,8,'#3d7a34');R(b,x+7,25,2,5,'#5aa84a')}
+  for(const d of beds){poly(b,ngon(d.x,d.y,18,5,-Math.PI/2),'#3b2412');poly(b,d.p,'#5b3a22');for(let i=0;i<14;i++){const px=d.x-10+hs(d.x,i)*20,py=d.y-8+hs(i,d.y)*18;if(inside(px,py,d.p))R(b,px,py,1,2,i%2?'#5aa84a':'#4a2e1a')}}},
+ blocks:[[22,58,30,20],[226,146,32,14],[18,160,34,16],...beds.map(d=>[d.x-13,d.y-11,26,24])],
+ objs:[{id:'tank',name:'Serbatoio dell’acqua',r:[20,14,54,66],act(){S.solved.ladder?say([['MIRA','Tubo riparato. L’acqua scorre di nuovo.']]):openPz('ladder')}},
+  {id:'rack',name:'Rastrelliera con la scala',r:[98,6,44,26],act(){note('ladder','Etichetta','Scala telescopica: lunghezza 25 dm.')}},
+  {id:'table',name:'Tavolo con il manuale',r:[226,138,32,22],act(){note('pent','Manuale della serra','Apotema = lato × numero fisso. Numero fisso del pentagono: 0,688.')}},
+  ...beds.map((d,i)=>({id:'bed'+i,name:'Aiuola pentagonale',r:[d.x-18,d.y-18,36,34],act(){S.solved.pent?say([['MIRA','Bordi montati: le piantine sono al sicuro.']]):openPz('pent')}}))],
+ tall(){return[{y:78,d:()=>ctx.drawImage(tank,22,16)},{y:160,d:()=>ctx.drawImage(table,226,140)},{y:176,d:()=>ctx.drawImage(flowers,18,146)}]},
+ wallDyn(){if(S.solved.ladder){R(ctx,50,13,10,6,'#f08a3c');R(ctx,50,15,10,1,'#c0603a')}else{R(ctx,52,14,6,4,'#1a2a30')}},
+ floorDyn(){if(S.solved.pent)for(const d of beds){for(const[x,y]of d.rim)R(ctx,x,y,1,1,'#d99a4e');for(const[x,y]of d.rim)if(!inside(x+.5,y+1.5,ngon(d.x,d.y,19.5,5,-Math.PI/2)))R(ctx,x,y,1,1,'#8a4f25');
+  for(let i=0;i<5;i++){const a=i*1.3+d.x;R(ctx,d.x+Math.cos(a)*8,d.y+Math.sin(a)*7,2,2,['#e6a3e8','#f2c14e','#ff8a8a'][i%3])}}},
+ tick(dt){if(!S.solved.ladder)emit(dt,.12,()=>addP(55+Math.random()*2,19,0,10,.8,'#8fd0e0',160,1));
+  if(S.solved.pent&&Math.random()<dt*3){const d=beds[(Math.random()*3)|0];addP(d.x+(Math.random()-.5)*20,d.y-10,0,-8,.8,'#fff6b0',0,1)}},
+ ambient(){},
+ intro:[['MIRA','Modulo 2: la serra. Qui coltiviamo il cibo dell’equipaggio.'],['MIRA','Il serbatoio dell’acqua perde e le aiuole hanno perso i bordi. Se non ripariamo, niente insalata per mesi!']]};
+
+/* ---------- stanza 3: sala macchine ---------- */
+const deskLog=spr(32,20,c=>{c.drawImage(desk,0,0);R(c,20,0,9,6,'#3b2412');R(c,21,1,7,4,'#c0392b');R(c,22,2,5,1,'#f6e3b4')});
+const barrels=spr(34,26,c=>{for(const x of[0,17]){R(c,x,2,16,24,'#3b2412');R(c,x+1,3,14,22,'#e0a526');R(c,x+1,3,4,22,'#f2c14e');R(c,x+1,8,14,2,'#8a4f25');R(c,x+1,19,14,2,'#8a4f25');R(c,x+2,0,12,3,'#8a4f25');R(c,x+5,12,6,5,'#2b2d4a');R(c,x+7,13,2,3,'#f2c14e')}});
+const vents=[36,68,100].map(x=>({x,p:ngon(x,22,1,4,0).map((_,k)=>[[x,10],[x+9,22],[x,34],[x-9,22]][k])}));
+vents.forEach(v=>{v.rim=ring(null,[[v.x,8],[v.x+11,22],[v.x,36],[v.x-11,22]],v.p)});
+const R3={name:'Sala macchine',spawn:[100,150],door:true,pz:['rhombus','core'],notes:['diag'],
+ pal:{w:'#4a3b38',wl:'#6a544c',wd:'#2e2422',floor:fGrate},
+ decor(b){for(const v of vents){poly(b,[[v.x,8],[v.x+11,22],[v.x,36],[v.x-11,22]],'#2e2422');poly(b,v.p,'#141418');for(let y=14;y<32;y+=3)R(b,v.x-8,y,16,1,'#3b302c')}
+  R(b,140,28,112,5,'#8a4f25');R(b,140,28,112,1,'#d99a4e');for(const x of[160,200,240])R(b,x,26,5,9,'#5b3418');
+  for(const x of[150,176]){circ(b,x,15,6,'#1a1b30');circ(b,x,15,5,'#f6e3b4');R(b,x,11,1,4,'#c0392b')}
+  for(let i=0;i<9;i++)R(b,214+i/2,20-i,10-i,1,'#f2c14e');R(b,218,13,1,4,'#3b2412');R(b,218,18,1,1,'#3b2412');
+  R(b,166,48,4,40,'#2b2d4a');R(b,167,48,1,40,'#4b4f5e')},
+ blocks:[[36,146,32,14],[268,152,34,18],[144,94,48,34]],
+ objs:[{id:'vents',name:'Condotti a rombo',r:[24,6,88,32],act(){S.solved.rhombus?say([['MIRA','Guarnizioni a posto: niente più vapore.']]):openPz('rhombus')}},
+  {id:'log',name:'Registro di manutenzione',r:[36,138,32,22],act(){note('diag','Registro di manutenzione','Ogni condotto a rombo ha diagonali di 16 cm e 12 cm.')}},
+  {id:'core',name:'Nucleo del reattore',r:[142,88,52,42],act(){S.solved.core?say([['MIRA','Il nucleo è stabile. Ottimo lavoro.']]):openPz('core')}},
+  {id:'barrels',name:'Fusti',r:[268,144,34,26],act(){say([['MIRA','Carburante di riserva. Meglio non giocarci.']])}}],
+ tall(){return[{y:160,d:()=>ctx.drawImage(deskLog,36,140)},{y:170,d:()=>ctx.drawImage(barrels,268,144)},{y:128,d:drawCore}]},
+ wallDyn(){if(S.solved.rhombus)for(const v of vents)for(const[x,y]of v.rim)R(ctx,x,y,1,1,'#f08a3c')},
+ floorDyn(){},
+ tick(dt){if(!S.solved.rhombus)emit(dt,.07,()=>{const v=vents[(Math.random()*3)|0];addP(v.x+(Math.random()-.5)*8,30,(Math.random()-.5)*8,6+Math.random()*10,1.1,'#dfe6ee',-6,2)});
+  if(!S.solved.core&&Math.random()<dt*2)for(let i=0;i<4;i++)addP(168,104,(Math.random()-.5)*50,-20-Math.random()*30,.4,'#ffb35a',90,1)},
+ ambient(){if(!S.solved.core){ctx.fillStyle=`rgba(200,90,20,${(.10+.07*Math.sin(t*5)).toFixed(3)})`;ctx.fillRect(0,0,W,H)}},
+ intro:[['MIRA','Modulo 3: la sala macchine. Fa caldo, eh?'],['MIRA','I condotti sfiatano vapore e il nucleo del reattore è instabile. Attento: qui la tabella dei numeri fissi è bruciata.']]};
+function drawCore(){const ok=S.solved.core,f=ok?0:Math.sin(t*9)*.5+.5;
+ hex(ctx,168,112,24,'#1a1b30');hex(ctx,168,111,22,'#565a92');hex(ctx,168,111,19,'#3e4170');
+ hex(ctx,168,108,15,'#1a1b30');hex(ctx,168,108,14,ok?'#2f8fa0':(f>.5?'#e0632a':'#c0392b'));hex(ctx,168,108,9,ok?'#6fe3f0':(f>.5?'#ffb35a':'#f08a3c'));hex(ctx,168,107,4,ok?'#e8fdff':'#fff0c0');
+ for(let i=0;i<6;i++){const a=i*Math.PI/3;R(ctx,168+Math.cos(a)*20-1,111+Math.sin(a)*17-1,2,2,'#8e93ad')}}
+
+/* ---------- stanza 4: ponte di comando ---------- */
+const consoleS=spr(40,20,c=>{R(c,0,0,40,20,'#1a1b30');R(c,1,1,38,7,'#3e4170');R(c,1,1,38,1,'#565a92');R(c,4,2,14,4,'#0f2f3a');R(c,5,3,9,1,'#6fe3f0');R(c,22,3,3,3,'#e0463c');R(c,27,3,3,3,'#f2c14e');R(c,32,3,3,3,'#4fd16a');R(c,1,8,38,11,'#2b2d4a');R(c,1,8,38,1,'#1d1e33')});
+const chair=spr(18,24,c=>{R(c,2,0,14,12,'#3b1a20');R(c,3,1,12,10,'#a33b4a');R(c,3,1,12,2,'#c95a68');R(c,0,10,18,8,'#3b1a20');R(c,1,11,16,6,'#a33b4a');R(c,8,18,2,4,'#1a1b30');R(c,4,22,10,2,'#1a1b30')});
+const R4={name:'Ponte di comando',spawn:[160,166],door:false,pz:['b1','b2','b3'],notes:[],
+ pal:{w:'#262a52',wl:'#3a3f75',wd:'#1a1d3a',floor:fCarpet},
+ decor(b){for(const x of[18,210]){R(b,x,6,92,34,'#1a1b30');R(b,x+2,8,88,30,'#070a1c');for(let i=0;i<24;i++)R(b,x+3+hs(x,i)*86,9+hs(i,x)*28,1,1,i%4?'#fff':'#f2c14e');
+   for(let i=0;i<40;i++){const px=x+20+hs(i,x+1)*50,py=14+hs(x+2,i)*18;b.fillStyle='rgba(180,90,220,.18)';b.fillRect(px|0,py|0,3,2)}R(b,x+45,8,2,30,'#1a1b30')}
+  circ(b,276,22,7,'#6fa8dc');circ(b,274,20,4,'#9cc8ee')},
+ blocks:[[24,50,40,18],[256,50,40,18],[152,116,18,14],[286,160,16,12]],
+ objs:[{id:'orbis',name:'ORBIS',r:[116,2,88,46],act:bossAct},
+  {id:'cl',name:'Console di sinistra',r:[24,46,40,24],act(){say([['MIRA','ORBIS è l’IA di difesa. Il meteorite l’ha mandata in tilt: ora pensa che gli intrusi siamo noi!']])}},
+  {id:'cr',name:'Console di rotta',r:[256,46,40,24],act(){say([['Console di rotta','Portale di salto rilevato. Coordinate sulla mappa stellare. Comandi bloccati da ORBIS.']])}},
+  {id:'chair',name:'Poltrona del capitano',r:[150,104,22,28],act(){say([['MIRA','La poltrona del capitano. Prima di sederti, però, bisogna spegnere ORBIS.']])}}],
+ tall(){return[{y:68,d:()=>ctx.drawImage(consoleS,24,48)},{y:68,d:()=>ctx.drawImage(consoleS,256,48)},{y:130,d:()=>ctx.drawImage(chair,152,106)},{y:172,d:()=>ctx.drawImage(plant,286,150)}]},
+ wallDyn(){R(ctx,116,2,88,44,'#1a1b30');R(ctx,118,4,84,40,S.boss>=3?'#0b1a22':'#120818');
+  if(S.boss<3){const p=.5+.5*Math.sin(t*3);for(let dy=-12;dy<=12;dy++){const hw=Math.round(32*Math.sqrt(1-(dy/12.5)**2));R(ctx,160-hw,22+dy,hw*2,1,'#3a0d1a')}
+   circ(ctx,160+Math.sin(t*.7)*6,22,9,p>.5?'#e0463c':'#c0392b');circ(ctx,160+Math.sin(t*.7)*6,22,4,'#1a0508');R(ctx,157+Math.sin(t*.7)*6,18,2,2,'#ffb0a8');
+   for(let y=5;y<44;y+=3){ctx.fillStyle='rgba(0,0,0,.28)';ctx.fillRect(118,y,84,1)}
+   if(Math.random()<.07){const y=6+Math.random()*34;ctx.drawImage(cv,118,y,84,3,118+(Math.random()-.5)*8,y,84,3)}
+   for(let i=0;i<3;i++)hex(ctx,140+i*20,40,4,i<3-S.boss?'#6fe3f0':'#3a3d5c')}
+  else{R(ctx,140,16,40,2,'#6fe3f0');R(ctx,148,22,24,2,'#6fe3f0');R(ctx,144,28,32,2,'#3fb6d6')}},
+ floorDyn(){},
+ tick(){},
+ ambient(){if(S.boss<3){ctx.fillStyle=`rgba(120,20,160,${(.08+.06*Math.sin(t*3)).toFixed(3)})`;ctx.fillRect(0,0,W,H)}
+  if(S.mode==='cut'){const k=Math.min(1,S.jumpT/2.4);ctx.save();ctx.strokeStyle='#fff';ctx.lineWidth=1;
+   for(const x of[18,210]){ctx.save();ctx.beginPath();ctx.rect(x+2,8,88,30);ctx.clip();const cx=x+46,cy=23;
+    for(let i=0;i<40;i++){const a=hs(i,x)*6.283,r0=4+hs(x,i)*30,r1=r0+k*70;ctx.globalAlpha=.4+.6*k;ctx.beginPath();ctx.moveTo(cx+Math.cos(a)*r0,cy+Math.sin(a)*r0);ctx.lineTo(cx+Math.cos(a)*r1,cy+Math.sin(a)*r1);ctx.stroke()}ctx.restore()}
+   ctx.restore();ctx.globalAlpha=1;if(S.jumpT>2.2){ctx.fillStyle=`rgba(255,255,255,${Math.min(1,(S.jumpT-2.2)/.8)})`;ctx.fillRect(0,0,W,H)}}},
+ intro:[['MIRA','Il ponte di comando! Ce l’abbiamo quasi fatta.'],['ORBIS','INTRUSO RILEVATO. ACCESSO AI COMANDI NEGATO.'],['MIRA','È ORBIS, l’IA di difesa. Ha tre scudi: ogni calcolo giusto ne abbatte uno. Avvicinati allo schermo centrale.']]};
+const ROOMS=[R1,R2,R3,R4];
+
+/* ---------- figure dei problemi ---------- */
+const AR='<defs><marker id="ar" viewBox="0 0 8 8" refX="4" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L8 4L0 8z" fill="#3b2412"/></marker><pattern id="gr" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M20 0H0V20" fill="none" stroke="#b9bdd0"/></pattern></defs>';
+const lab=(x,y,s,bg='#fffaf0')=>{const w=s.length*12+18;return`<rect x="${x-w/2}" y="${y-18}" width="${w}" height="28" rx="6" fill="${bg}" stroke="#3b2412" stroke-width="2"/><text x="${x}" y="${y+3}" text-anchor="middle" font-size="20" font-weight="700" fill="#3b2412">${s}</text>`};
+const big=(x,y,s,c='#3b2412')=>`<text x="${x}" y="${y}" text-anchor="middle" font-size="24" font-weight="700" fill="${c}" stroke="#fbf0d2" stroke-width="5" paint-order="stroke">${s}</text>`;
+const qh=(x1,x2,y)=>`<line x1="${x1}" y1="${y}" x2="${x2}" y2="${y}" stroke="#3b2412" stroke-width="2" marker-start="url(#ar)" marker-end="url(#ar)"/>`;
+const qv=(x,y1,y2)=>`<line x1="${x}" y1="${y1}" x2="${x}" y2="${y2}" stroke="#3b2412" stroke-width="2" marker-start="url(#ar)" marker-end="url(#ar)"/>`;
+const pts=a=>a.map(p=>p.map(v=>v.toFixed(1)).join(',')).join(' ');
+const regSvg=(n,rot,extra,top)=>{const P=ngon(160,128,88,n,rot),ap=88*Math.cos(Math.PI/n),fy=128+ap;
+ return`<svg viewBox="0 0 320 250" role="img">${AR}<polygon points="${pts(P)}" fill="#d7dbe8" stroke="#3b2412" stroke-width="3"/>
+ <g stroke="#a3a8c2" stroke-width="1.5">${P.map(p=>`<line x1="160" y1="128" x2="${p[0].toFixed(1)}" y2="${p[1].toFixed(1)}"/>`).join('')}</g>
+ <line x1="160" y1="128" x2="160" y2="${fy.toFixed(1)}" stroke="#f08a3c" stroke-width="4" stroke-dasharray="8 5"/><path d="M160 ${(fy-9).toFixed(1)}h9v9" fill="none" stroke="#3b2412" stroke-width="2"/>
+ <circle cx="160" cy="128" r="4" fill="#3b2412"/>${extra(fy)}${top?lab(160,22,top):''}</svg>`};
+const PZ={
+cable:{title:'Cavo d’emergenza',unit:'m',at:[176,96],
+ svg:`<svg viewBox="0 0 420 232" role="img">${AR}<rect x="30" y="64" width="240" height="100" fill="#d7dbe8"/><rect x="30" y="64" width="240" height="100" fill="url(#gr)"/>
+ <polygon points="30,164 270,164 270,64" fill="#f08a3c" fill-opacity=".15"/><rect x="30" y="64" width="240" height="100" fill="none" stroke="#3b2412" stroke-width="3"/>
+ <path d="M254 164V148H270" fill="none" stroke="#3b2412" stroke-width="2"/>
+ <line x1="30" y1="164" x2="270" y2="64" stroke="#f08a3c" stroke-width="5" stroke-dasharray="12 7" stroke-linecap="round"/>
+ <line x1="270" y1="64" x2="270" y2="22" stroke="#f08a3c" stroke-width="5" stroke-linecap="round"/><rect x="258" y="10" width="24" height="16" rx="3" fill="#e0463c" stroke="#3b2412" stroke-width="2"/>
+ <rect x="17" y="151" width="26" height="26" rx="3" fill="#4a4e6e" stroke="#3b2412" stroke-width="2"/><path d="M33 154l-8 11h6l-3 9 9-13h-6z" fill="#f2c14e"/>
+ ${lab(150,118,'?')}${lab(160,30,'+ 2 m in salita')}${qh(30,270,186)}${lab(150,214,'lunghezza')}${qv(292,64,164)}${lab(356,118,'larghezza')}</svg>`,
+ text:'Il cavo deve andare <b>dritto</b> dalla batteria all’angolo opposto, sotto la porta, attraversando la stanza in diagonale. Da lì servono altri 2 m per salire fino alla presa del pannello. Le misure della stanza sono registrate nel terminale. <b>Quanti metri di cavo servono in tutto?</b>',
+ hint:'Suggerimento: larghezza = (34 − 2 × 12) : 2. Poi Pitagora per la diagonale, poi aggiungi 2 m.',
+ check(v){if(n(v,15))return true;if(n(v,13))return'Hai trovato la diagonale, ma mancano i 2 m per salire alla presa!';if(n(v,17)||n(v,19))return'Hai sommato lunghezza e larghezza, ma il cavo taglia in diagonale: è l’ipotenusa.';
+  if(n(v,169)||n(v,171))return'169 è l’ipotenusa al quadrato: manca la radice quadrata.';if(n(v,25.06,.06)||n(v,27.06,.06)||n(v,22))return'La larghezza non è 34 − 12: il perimetro comprende due lunghezze e due larghezze.';
+  if(n(v,15.62,.06)||n(v,17.62,.06)||n(v,10))return'34 − 24 = 10 sono due larghezze insieme: dividi per 2.';if(n(v,5))return'5 m è la larghezza. Ora la diagonale, e poi il tratto in salita.'},
+ ok:[['MIRA','Energia ripristinata! Le luci si riaccendono.']]},
+hatch:{title:'Portello esagonale',unit:'piastre',at:[160,108],
+ svg:regSvg(6,0,fy=>big(172,fy-22,'a','#c0602a'),'P = 60 dm'),
+ text:'Il portello esagonale perde aria. Sul bordo è inciso: <b>perimetro 60 dm</b>. Va coperto con le piastre di riparazione che trovi nelle casse. Numero fisso dell’esagono: 0,866. <b>Quante piastre servono, come minimo?</b>',
+ hint:'Suggerimento: lato = 60 : 6; a = lato × 0,866; A = (P × a) : 2. Poi dividi per l’area di una piastra e arrotonda per eccesso.',
+ check(v){if(n(v,7))return true;if(n(v,6))return'Con 6 piastre copri meno dell’area del portello: resta un buco!';if(n(v,259.8,.3))return'Questa è l’area del portello. Ora: quante piastre servono?';
+  if(n(v,6.5,.01)||n(v,6.495,.01))return'Le piastre sono intere: arrotonda per eccesso, se no resta un buco.';if(n(v,13))return'Nell’area hai dimenticato di dividere per 2.';
+  if(n(v,8))return'Sembra che tu abbia usato il lato al posto dell’apotema. Prima: a = lato × 0,866.';if(n(v,10))return'10 dm è il lato. Continua: apotema, area, piastre.';if(n(v,8.66,.01))return'Questa è l’apotema. Continua: area e poi piastre.'},
+ ok:[['MIRA','Portello sigillato. L’aria non scappa più.']]},
+ladder:{title:'Il tubo del serbatoio',unit:'dm',at:[56,30],
+ svg:`<svg viewBox="0 0 360 262" role="img">${AR}<line x1="10" y1="212" x2="300" y2="212" stroke="#3b2412" stroke-width="3"/>
+ <rect x="200" y="32" width="60" height="180" fill="#6fb3c4" stroke="#3b2412" stroke-width="3"/><rect x="200" y="32" width="14" height="180" fill="#8fd0e0"/><rect x="250" y="20" width="16" height="12" fill="#8e93ad" stroke="#3b2412" stroke-width="2"/>
+ <path d="M200 194h-14v18" fill="none" stroke="#3b2412" stroke-width="2"/>
+ <g stroke="#8a4f25" stroke-width="5" stroke-linecap="round"><line x1="130" y1="212" x2="200" y2="32"/></g>
+ <g stroke="#b8733a" stroke-width="3">${[...Array(8)].map((_,i)=>{const k=(i+1)/9,x=130+70*k,y=212-180*k;return`<line x1="${x-7}" y1="${y}" x2="${x+5}" y2="${y}"/>`}).join('')}</g>
+ ${qv(276,32,212)}${lab(320,126,'24 dm')}${qh(130,200,232)}${lab(165,252,'? dm')}${lab(100,110,'scala')}</svg>`,
+ text:'Il tubo si è rotto in cima al serbatoio, a <b>24 dm</b> da terra. La scala deve appoggiarsi esattamente al bordo superiore. La lunghezza della scala è sull’etichetta della rastrelliera. <b>A che distanza dal serbatoio devi mettere il piede della scala?</b>',
+ hint:'Suggerimento: la scala è l’ipotenusa. d = √(25² − 24²).',
+ check(v){if(n(v,7))return true;if(n(v,49))return'49 è la distanza al quadrato: manca la radice quadrata.';if(n(v,1))return'Hai sottratto le lunghezze. Con Pitagora si sottraggono i quadrati.';
+  if(n(v,34.66,.06))return'Hai sommato i quadrati: qui la scala è l’ipotenusa, quindi devi sottrarre.';if(n(v,25)||n(v,24))return'Questo è un dato, non la risposta: ti serve il cateto sul pavimento.'},
+ ok:[['MIRA','Tubo riparato! L’acqua torna nelle aiuole.']]},
+pent:{title:'Le aiuole pentagonali',unit:'dm',at:[148,120],
+ svg:(()=>{const P=ngon(160,122,86,5,-Math.PI/2),ap=86*Math.cos(Math.PI/5),fy=122+ap,m=[(P[0][0]+P[1][0])/2,(P[0][1]+P[1][1])/2];
+  return`<svg viewBox="0 0 320 252" role="img">${AR}<polygon points="${pts(P)}" fill="#7a5230" stroke="#3b2412" stroke-width="4"/><polygon points="${pts(ngon(160,122,74,5,-Math.PI/2))}" fill="#5b3a22"/>
+  <line x1="160" y1="122" x2="160" y2="${fy.toFixed(1)}" stroke="#f2c14e" stroke-width="4" stroke-dasharray="8 5"/><circle cx="160" cy="122" r="4" fill="#f2c14e"/>
+  ${lab(160,236,'a = 6,88 dm')}${lab(m[0]+44,m[1]-14,'l = ?')}<path d="M160 ${(fy-9).toFixed(1)}h9v9" fill="none" stroke="#f2c14e" stroke-width="2"/></svg>`})(),
+ text:'Le aiuole della serra sono pentagoni regolari tutti uguali. Sul cartellino: <b>apotema 6,88 dm</b>. Devi mettere un bordo di legno intorno a <b>tutte</b> le aiuole della serra. Il numero fisso è nel manuale sul tavolo. <b>Quanti dm di bordo servono?</b>',
+ hint:'Suggerimento: lato = 6,88 : 0,688. Perimetro = 5 × lato. Poi moltiplica per il numero di aiuole che vedi.',
+ check(v){if(n(v,150))return true;if(n(v,50))return'Questo è il bordo di una sola aiuola. Quante aiuole ci sono nella serra?';if(n(v,100)||n(v,200))return'Contale bene: quante aiuole vedi nella serra?';
+  if(n(v,10))return'10 dm è il lato. Ora il perimetro... di tutte le aiuole!';if(n(v,34.4,.05)||n(v,103.2,.05))return'Hai usato l’apotema come lato. Il lato si ricava dall’apotema.';if(n(v,4.73,.01))return'Al contrario: lato = apotema : numero fisso.'},
+ ok:[['MIRA','Bordi montati! Le piantine ringraziano.']]},
+rhombus:{title:'Condotti di ventilazione',unit:'cm',at:[68,24],
+ svg:`<svg viewBox="0 0 320 240" role="img">${AR}<polygon points="160,40 214,112 160,184 106,112" fill="#3b302c" stroke="#3b2412" stroke-width="4"/>
+ ${[...Array(8)].map((_,i)=>{const y=60+i*15,hw=54*(1-Math.abs(y-112)/72);return`<line x1="${(160-hw+6).toFixed(1)}" y1="${y}" x2="${(160+hw-6).toFixed(1)}" y2="${y}" stroke="#6a544c" stroke-width="3"/>`}).join('')}
+ <line x1="160" y1="40" x2="160" y2="184" stroke="#f2c14e" stroke-width="3" stroke-dasharray="8 5"/><line x1="106" y1="112" x2="214" y2="112" stroke="#6fe3f0" stroke-width="3" stroke-dasharray="8 5"/>
+ <path d="M160 102h10v10" fill="none" stroke="#fbf0d2" stroke-width="2"/>${lab(160,218,'d₁')}${lab(250,118,'d₂')}${lab(234,62,'l = ?')}</svg>`,
+ text:'I condotti a forma di rombo sfiatano vapore. Bisogna incollare una guarnizione lungo il bordo di <b>tutti</b> i condotti sulla parete. Le misure dei condotti sono nel registro di manutenzione. <b>Quanti cm di guarnizione servono?</b>',
+ hint:'Suggerimento: le diagonali si tagliano a metà ad angolo retto. Lato = √(8² + 6²). Poi perimetro × numero di condotti.',
+ check(v){if(n(v,120))return true;if(n(v,40))return'Questo è il bordo di un solo condotto. Quanti condotti ci sono sulla parete?';if(n(v,80)||n(v,240))return'Usa le metà delle diagonali: il lato è l’ipotenusa di un triangolo con cateti 8 e 6.';
+  if(n(v,56)||n(v,168))return'Il lato del rombo non si ottiene sommando le diagonali: usa Pitagora sulle metà.';if(n(v,10))return'10 cm è il lato. Ora il perimetro, per tutti i condotti.';if(n(v,96)||n(v,288))return'Questa è un’area: la guarnizione è una lunghezza.'},
+ ok:[['MIRA','Guarnizioni incollate: il vapore si ferma.']]},
+core:{title:'Nucleo del reattore',unit:'cm²',at:[168,104],
+ svg:regSvg(6,0,fy=>`<polygon points="160,128 ${(160-44).toFixed(1)},${fy.toFixed(1)} ${(160+44).toFixed(1)},${fy.toFixed(1)}" fill="#f08a3c" fill-opacity=".2"/>${big(176,fy-22,'a = ?','#c0602a')}${qh(116,204,fy+16)}${lab(160,fy+40,'l = 20 cm')}`).replace('viewBox="0 0 320 250"','viewBox="0 0 320 262"'),
+ text:'Il nucleo è un esagono regolare di lato <b>20 cm</b>. Lo schermo protettivo deve avere la sua stessa area. La tabella dei numeri fissi è bruciata: l’apotema la trovi con Pitagora (l’esagono è formato da 6 triangoli equilateri). <b>Area in cm², arrotondata ai decimi?</b>',
+ hint:'Suggerimento: a = √(20² − 10²). Poi A = (P × a) : 2, con P = 6 × 20.',
+ check(v){if(v>=1037.5&&v<=1039.5)return true;if(n(v,17.32,.02))return'Questa è l’apotema. Ora calcola l’area!';if(n(v,2078.4,2))return'Hai dimenticato di dividere per 2.';if(n(v,1200))return'Hai usato il lato come apotema.';
+  if(n(v,22.36,.02)||n(v,1341.6,2))return'Nel triangolo il lato dell’esagono è l’ipotenusa: devi sottrarre i quadrati.';if(n(v,173.2,.3))return'Questa è l’area di un solo triangolo. Quanti triangoli formano l’esagono?';if(n(v,300))return'300 è l’apotema al quadrato: manca la radice.'},
+ ok:[['MIRA','Nucleo stabilizzato. La temperatura scende.']]},
+b1:{title:'ORBIS · Scudo 1: la mappa stellare',unit:'mila km',at:[160,24],
+ svg:(()=>{const X=x=>24+x*18,Y=y=>214-y*18;let g='';for(let i=0;i<=18;i++)g+=`<line x1="${X(i)}" y1="${Y(0)}" x2="${X(i)}" y2="${Y(10)}" stroke="#2a3a6a"/>`;for(let j=0;j<=10;j++)g+=`<line x1="${X(0)}" y1="${Y(j)}" x2="${X(18)}" y2="${Y(j)}" stroke="#2a3a6a"/>`;
+  let ax='';for(let i=0;i<=18;i+=2)ax+=`<text x="${X(i)}" y="236" text-anchor="middle" font-size="15" font-weight="700" fill="#3b2412">${i}</text>`;for(let j=0;j<=10;j+=2)ax+=`<text x="14" y="${Y(j)+5}" text-anchor="middle" font-size="15" font-weight="700" fill="#3b2412">${j}</text>`;
+  return`<svg viewBox="0 0 370 244" role="img"><rect x="${X(0)}" y="${Y(10)}" width="324" height="180" fill="#0d1330"/>${g}${ax}
+  <line x1="${X(2)}" y1="${Y(1)}" x2="${X(17)}" y2="${Y(9)}" stroke="#f2c14e" stroke-width="3" stroke-dasharray="9 6"/>
+  <circle cx="${X(2)}" cy="${Y(1)}" r="8" fill="#6fe3f0" stroke="#fff" stroke-width="2"/><circle cx="${X(17)}" cy="${Y(9)}" r="9" fill="none" stroke="#d58ad8" stroke-width="4"/>
+  ${lab(X(2)+62,Y(1)-20,'N (2; 1)')}${lab(X(17)-52,Y(9)+30,'P (17; 9)')}</svg>`})(),
+ text:'ORBIS ha nascosto il portale di salto, ma la mappa stellare lo mostra: la nave è in <b>N</b>, il portale in <b>P</b>. Ogni quadretto vale 1000 km. <b>Quante migliaia di km separano N e P in linea d’aria?</b>',
+ hint:'Suggerimento: differenza delle x = 17 − 2, differenza delle y = 9 − 1. Poi Pitagora.',
+ check(v){if(n(v,17))return true;if(n(v,23))return'Questo è il percorso a scalini. In linea d’aria è l’ipotenusa.';if(n(v,289))return'289 è la distanza al quadrato: manca la radice.';if(n(v,15)||n(v,8))return'Questo è solo un cateto. Ti serve l’ipotenusa.';if(n(v,19.24,.05)||n(v,21.02,.05))return'Attento alle differenze: 17 − 2 e 9 − 1.'},
+ then(){S.boss=1;say([['ORBIS','SCUDO 1... COMPROMESSO. Non succederà di nuovo, umano.']],()=>openPz('b2'))}},
+b2:{title:'ORBIS · Scudo 2: il campo di forza',unit:'dm²',at:[160,24],
+ svg:regSvg(8,Math.PI/8,fy=>big(172,fy-26,'a','#7a2e9a'),'P = 80 dm'),
+ text:'Il secondo scudo è un campo di forza a forma di ottagono regolare con <b>perimetro 80 dm</b>. Numero fisso dell’ottagono: 1,207. Per bucarlo devi inserire la sua area esatta. <b>Area in dm²?</b>',
+ hint:'Suggerimento: lato = 80 : 8; a = lato × 1,207; A = (P × a) : 2.',
+ check(v){if(n(v,482.8,.3))return true;if(n(v,965.6,.5))return'Hai dimenticato di dividere per 2.';if(n(v,96.56,.05))return'Hai moltiplicato il perimetro per il numero fisso: prima trova il lato, poi l’apotema.';
+  if(n(v,12.07,.01))return'Questa è l’apotema. Ora l’area!';if(n(v,400))return'Hai usato il lato al posto dell’apotema.';if(n(v,10))return'10 dm è il lato. Continua.'},
+ then(){S.boss=2;say([['ORBIS','SCUDO 2 PERSO. Calcolo... impossibile... Ultimo scudo attivo!']],()=>openPz('b3'))}},
+b3:{title:'ORBIS · Ultimo scudo: il nucleo',unit:'cm²',at:[160,24],
+ svg:`<svg viewBox="0 0 340 214" role="img">${AR}<polygon points="50,160 290,160 170,125" fill="#e0a0a0" stroke="#3b2412" stroke-width="3"/>
+ <line x1="170" y1="125" x2="170" y2="160" stroke="#c0392b" stroke-width="3" stroke-dasharray="6 4"/><path d="M170 152h8v8" fill="none" stroke="#3b2412" stroke-width="2"/>
+ ${big(184,150,'h','#c0392b')}${big(100,132,'l')}${big(240,132,'l')}${qh(50,290,178)}${lab(170,204,'b = 48 cm')}${lab(170,62,'P = 98 cm')}</svg>`,
+ text:'Ultimo scudo! Il nucleo di ORBIS è un triangolo isoscele con <b>base 48 cm</b> e <b>perimetro 98 cm</b>. Per spegnerlo devi inserire la sua area. <b>Area in cm²?</b>',
+ hint:'Suggerimento: lato obliquo = (98 − 48) : 2. L’altezza taglia la base a metà: h = √(25² − 24²).',
+ check(v){if(n(v,168))return true;if(n(v,336))return'Hai dimenticato di dividere per 2.';if(n(v,7))return'7 cm è l’altezza. Ora l’area!';if(n(v,25))return'25 cm è il lato obliquo. Ora trova l’altezza.';
+  if(n(v,600)||n(v,1200))return'Hai usato il lato obliquo come altezza: l’altezza si trova con Pitagora.';if(n(v,49))return'49 è l’altezza al quadrato: manca la radice.'},
+ then(){S.boss=3;say([['ORBIS','Sistema... in... arresto... Buonanotte... cadetto.'],['MIRA','ORBIS è offline! Comandi sbloccati.'],['MIRA','Rotta impostata sul portale. Tieniti forte: salto a curvatura!']],startJump)}}
+};
+const n=(a,b,tol=.01)=>Math.abs(a-b)<=tol;
+const NOTES={perim:'Terminale',plate:'Casse',ladder:'Rastrelliera',pent:'Manuale',diag:'Registro'};
+const NEED={cable:['perim'],hatch:['plate'],ladder:['ladder'],pent:['pent'],rhombus:['diag']};
+const TAUNT=['ORBIS: «Errore umano rilevato.»','ORBIS: «I tuoi calcoli sono... deludenti.»','ORBIS: «Gli scudi reggono. Riprova, umano.»'];
+
+/* ---------- stato ---------- */
+const P={x:100,y:104,dir:'down',moving:false,anim:0,target:null};
+let S,room=R1,bg=null,near=null,t=0,parts=[],acc={},lastSec=-1,lastNear='';
+const K={};
+const hl=s=>s.replace(/(\d+(?:,\d+)?)(\s?(?:dm²|cm²|m²|dm|cm|m)(?![a-zà-ù]))?/g,'<span class="n">$1$2</span>');
+const esc=s=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;');
+function buildBg(r){const c=mk(W,H),b=c.getContext('2d');base(b,r.pal);r.decor(b);if(r.door){}return c}
+function addP(x,y,vx,vy,life,col,g=0,s=1){parts.push({x,y,vx,vy,life,max:life,col,g,s})}
+function emit(dt,every,f){const k=f.toString().length+every;acc[k]=(acc[k]||0)+dt;while(acc[k]>every){acc[k]-=every;f()}}
+function burst(x,y){const c=['#f2c14e','#7cf08a','#6fe3f0','#f08a3c','#ffffff'];for(let i=0;i<34;i++)addP(x,y,(Math.random()-.5)*130,-30-Math.random()*80,.6+Math.random()*.6,c[i%5],140,2)}
+let ac=null;
+function beep(fs,dur=.1,type='square',vol=.045){try{ac=ac||new(window.AudioContext||window.webkitAudioContext)();const t0=ac.currentTime;
+ fs.forEach((f,i)=>{const o=ac.createOscillator(),g=ac.createGain();o.type=type;o.frequency.value=f;g.gain.setValueAtTime(vol,t0+i*dur);g.gain.exponentialRampToValueAtTime(.0001,t0+i*dur+dur*.95);o.connect(g).connect(ac.destination);o.start(t0+i*dur);o.stop(t0+i*dur+dur)})}catch(e){}}
+const roomDone=()=>room.pz.every(id=>S.solved[id]);
+
+/* ---------- dialoghi e taccuino ---------- */
+let dq=[],cur=null,shown=0,after=null;
+function say(lines,cb){dq=lines.slice();after=cb||null;S.mode='dlg';P.target=null;nextLine()}
+function nextLine(){if(!dq.length){$('dlg').hidden=true;cur=null;S.mode='play';const f=after;after=null;f&&f();return}
+ cur=dq.shift();shown=0;$('who').textContent=cur[0];$('who').className='who'+(cur[0]==='ORBIS'?' orbis':'');$('dtext').textContent='';$('dlg').hidden=false}
+function finishLine(){shown=cur[1].length;$('dtext').innerHTML=hl(esc(cur[1]))}
+function advance(){if(!cur)return;if(shown<cur[1].length)finishLine();else nextLine()}
+$('dlg').addEventListener('click',advance);
+function note(k,who,txt,extra=[]){const first=!S.notes[k];S.notes[k]=txt;hud();say([[who,txt],...extra,...(first?[['MIRA','Annotato nel taccuino.']]:[])]);if(first)beep([880,1175],.06,'square',.03)}
+function notesHtml(keys){return keys.length?'<ul>'+keys.map(k=>`<li>${hl(esc(S.notes[k]))}</li>`).join('')+'</ul>':''}
+$('hNotes').addEventListener('click',()=>{if(S.mode!=='play'&&S.mode!=='dlg')return;const ks=Object.keys(S.notes);$('nbList').innerHTML=ks.length?notesHtml(ks):'<p>Ancora vuoto: esamina gli oggetti delle stanze.</p>';$('nb').hidden=false;S.prevMode=S.mode;S.mode='nb'});
+$('nbClose').addEventListener('click',()=>{$('nb').hidden=true;S.mode=S.prevMode||'play'});
+
+/* ---------- porta e boss ---------- */
+function doorAct(){if(S.doorO>=1){goRoom(S.ri+1);return}if(S.doorOpening)return;
+ const left=room.pz.filter(id=>!S.solved[id]).length;say([['Porta',`Bloccata. Mancano ${left} ${left===1?'riparazione':'riparazioni'} in questo modulo.`]])}
+function bossAct(){if(S.boss>=3){say([['MIRA','ORBIS dorme. Lasciamola riposare.']]);return}
+ if(!S.bossTalk){S.bossTalk=true;say([['ORBIS','Vuoi i comandi, umano? Dimostra di saper calcolare. Tre scudi. Nessuna pietà.']],()=>openPz('b1'));return}
+ openPz(['b1','b2','b3'][S.boss])}
+function startJump(){S.mode='cut';S.jumpT=0;beep([262,330,392,523,659,784],.12,'triangle',.05)}
+
+/* ---------- finestra problema ---------- */
+let pzId=null,inp='',busy=false;
+const keys=['7','8','9','4','5','6','1','2','3',',','0','⌫'];
+$('keys').innerHTML=keys.map(k=>`<button class="btn" type="button" data-k="${k}" aria-label="${k==='⌫'?'Cancella':k}">${k}</button>`).join('')+'<button class="btn go" type="button" id="send">Inserisci</button>';
+$('keys').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;b.id==='send'?submit():press(b.dataset.k)});
+$('pzClose').addEventListener('click',closePz);
+function openPz(id){const p=PZ[id];pzId=id;inp='';S.mode='puzzle';P.target=null;$('pzTitle').textContent=p.title;$('pzFig').innerHTML=p.svg;$('pzText').innerHTML=hl(p.text);
+ const ks=room.notes.filter(k=>S.notes[k]),need=(NEED[id]||[]).filter(k=>!S.notes[k]);
+ $('pzNotes').innerHTML=room.notes.length||need.length?`<h3>Taccuino</h3>${notesHtml(ks)}${need.length?'<p class="miss">Mancano dei dati: esplora la stanza.</p>':''}`:'';$('pzNotes').hidden=!$('pzNotes').innerHTML;
+ $('pzUnit').textContent=p.unit;$('pzMsg').textContent='';$('pzMsg').className='msg';$('scr').className='screen';showInp();$('pz').hidden=false;$('send').focus()}
+function showInp(){$('pzVal').textContent=inp||'_'}
+function press(k){if(busy)return;beep([660],.03,'square',.025);$('scr').className='screen';
+ if(k==='⌫')inp=inp.slice(0,-1);else if(k===','){if(!inp.includes(','))inp+=(inp?'':'0')+','}else if(inp.length<8)inp+=k;showInp()}
+function submit(){if(busy)return;const p=PZ[pzId];if(!inp){$('pzMsg').className='msg bad';$('pzMsg').textContent='Scrivi prima un numero.';return}
+ const v=parseFloat(inp.replace(',','.')),r=p.check(v),box=$('pzBox');
+ if(r===true){busy=true;$('scr').className='screen ok';$('pzMsg').className='msg good';$('pzMsg').textContent='Esatto! Codice accettato.';beep([523,659,784,1047],.09,'square',.05);
+  setTimeout(()=>{busy=false;$('pz').hidden=true;solve(pzId)},1100)}
+ else{S.errors++;S.tries[pzId]=(S.tries[pzId]||0)+1;$('scr').className='screen bad';box.classList.remove('shake');void box.offsetWidth;box.classList.add('shake');beep([196,147],.12,'sawtooth',.035);
+  const fb=r||(S.tries[pzId]>=2?p.hint:'Risposta errata. Ricontrolla il ragionamento.');$('pzMsg').className='msg bad';
+  $('pzMsg').innerHTML=hl(esc((pzId[0]==='b'?TAUNT[S.errors%3]+' ':'')+fb));inp='';showInp();hud()}}
+function solve(id){const p=PZ[id];S.solved[id]=true;burst(...p.at);hud();
+ if(p.then){S.mode='play';p.then();return}
+ let L=p.ok.slice(),cb=null;if(room.door&&roomDone()){L.push(['MIRA','Tutti i guasti del modulo sono riparati: la porta si apre!']);cb=()=>{S.doorOpening=true;beep([392,523,659],.12)}}say(L,cb)}
+function closePz(){if(busy)return;$('pz').hidden=true;S.mode='play'}
+
+/* ---------- input ---------- */
+const map={ArrowUp:'up',KeyW:'up',ArrowDown:'down',KeyS:'down',ArrowLeft:'left',KeyA:'left',ArrowRight:'right',KeyD:'right'};
+addEventListener('keydown',e=>{
+ if(S.mode==='puzzle'){if(/^[0-9]$/.test(e.key))press(e.key);else if(e.key===','||e.key==='.')press(',');else if(e.key==='Backspace'){e.preventDefault();press('⌫')}
+  else if(e.key==='Enter'){e.preventDefault();submit()}else if(e.key==='Escape')closePz();return}
+ if(S.mode==='nb'){if(e.key==='Escape')$('nbClose').click();return}
+ if(map[e.code]){K[map[e.code]]=true;e.preventDefault()}
+ if(e.code==='KeyE'||e.code==='Space'||e.code==='Enter'){if(e.target.tagName==='BUTTON')return;e.preventDefault();
+  if(S.mode==='dlg')advance();else if(S.mode==='play'&&near)near.act();else if(S.mode==='start')begin()}});
+addEventListener('keyup',e=>{if(map[e.code])K[map[e.code]]=false});
+cv.addEventListener('pointerdown',e=>{if(S.mode==='dlg'){advance();return}if(S.mode!=='play')return;
+ const r=cv.getBoundingClientRect(),lx=(e.clientX-r.left)/r.width*W,ly=(e.clientY-r.top)/r.height*H;
+ const o=allObjs().find(o=>lx>=o.r[0]&&lx<=o.r[0]+o.r[2]&&ly>=o.r[1]&&ly<=o.r[1]+o.r[3]);
+ if(o){o.act();return}P.target={x:Math.max(21,Math.min(299,lx)),y:Math.max(54,Math.min(175,ly))}});
+$('go').addEventListener('click',begin);
+$('again').addEventListener('click',()=>{reset();begin()});
+const doorObj={id:'door',name:'Porta',r:[253,5,47,43],act:doorAct};
+const allObjs=()=>room.door?[...room.objs,doorObj]:room.objs;
+
+/* ---------- logica ---------- */
+function hit(x,y){const a=[x-4,y-3,8,3];if(a[0]<16||a[0]+8>304||a[1]<50||y>176)return true;
+ return room.blocks.some(b=>a[0]<b[0]+b[2]&&a[0]+a[2]>b[0]&&a[1]<b[1]+b[3]&&a[1]+a[3]>b[1])}
+function findNear(){let best=null,bd=14;for(const o of allObjs()){const[x,y,w,h]=o.r;const cx=Math.max(x,Math.min(P.x,x+w)),cy=Math.max(y,Math.min(P.y-2,y+h));
+ const d=Math.hypot(P.x-cx,P.y-2-cy);if(d<bd){bd=d;best=o}}return best}
+function hud(){$('hR').textContent=`Stanza ${S.ri+1}/4 · ${room.name}`;const done=room.pz.filter(id=>S.solved[id]).length;
+ $('hG').textContent=room.door?`Guasti riparati ${done}/${room.pz.length}`:`Scudi abbattuti ${done}/3`;$('hE').textContent=S.errors;$('hNotes').textContent=`Taccuino (${Object.keys(S.notes).length})`}
+function goRoom(i){S.mode='fade';S.fadeDir=1;S.next=i}
+function loadRoom(i){S.ri=i;room=ROOMS[i];bg=buildBg(room);Object.assign(P,{x:room.spawn[0],y:room.spawn[1],dir:'up',target:null});S.doorO=0;S.doorOpening=false;parts=[];acc={};hud()}
+function update(dt){t+=dt;
+ if(['play','dlg','puzzle','nb'].includes(S.mode)){S.el+=dt;const s=Math.floor(S.el);if(s!==lastSec){lastSec=s;$('hT').textContent=Math.floor(s/60)+':'+String(s%60).padStart(2,'0')}}
+ if(S.mode==='play'){let dx=(K.right?1:0)-(K.left?1:0),dy=(K.down?1:0)-(K.up?1:0);
+  if(dx||dy)P.target=null;else if(P.target){const ex=P.target.x-P.x,ey=P.target.y-P.y,d=Math.hypot(ex,ey);if(d<1.5)P.target=null;else{dx=ex/d;dy=ey/d}}
+  P.moving=!!(dx||dy);
+  if(P.moving){const l=Math.hypot(dx,dy);dx/=l;dy/=l;const sp=64*dt,ox=P.x,oy=P.y;
+   if(!hit(P.x+dx*sp,P.y))P.x+=dx*sp;if(!hit(P.x,P.y+dy*sp))P.y+=dy*sp;
+   if(P.target&&Math.abs(P.x-ox)<.01&&Math.abs(P.y-oy)<.01)P.target=null;
+   P.anim+=dt;P.dir=Math.abs(dx)>Math.abs(dy)?(dx>0?'right':'left'):(dy>0?'down':'up')}
+  near=findNear();
+  if(room.door&&S.doorO>=1&&P.y<57&&P.x>258&&P.x<286)goRoom(S.ri+1)}else P.moving=false;
+ const nl=S.mode==='play'&&near?'E: '+near.name:'Esplora la stanza';if(nl!==lastNear){lastNear=nl;$('hN').textContent=nl}
+ if(S.mode==='dlg'&&cur&&shown<cur[1].length){shown=Math.min(cur[1].length,shown+dt*60);if(shown>=cur[1].length)finishLine();else $('dtext').textContent=cur[1].slice(0,Math.floor(shown))}
+ if(S.doorOpening&&S.doorO<1)S.doorO=Math.min(1,S.doorO+dt*1.1);
+ if(S.mode==='fade'){S.fade+=S.fadeDir*dt*2.2;if(S.fadeDir>0&&S.fade>=1){S.fade=1;loadRoom(S.next);S.fadeDir=-1}else if(S.fadeDir<0&&S.fade<=0){S.fade=0;say(room.intro)}}
+ if(S.mode==='cut'){S.jumpT+=dt;if(S.jumpT>3.2&&!S.won){S.won=true;showWin()}}
+ room.tick(dt);
+ for(const p of parts){p.life-=dt;p.vy+=p.g*dt;p.x+=p.vx*dt;p.y+=p.vy*dt}parts=parts.filter(p=>p.life>0)}
+
+/* ---------- disegno ---------- */
+function drawDoor(){const o=Math.round(S.doorO*14);R(ctx,253,5,38,43,'#1a1b30');R(ctx,256,8,32,40,'#0a0c1c');
+ if(S.doorO>0){R(ctx,256,36,32,12,'#2b3a5a');ctx.fillStyle='rgba(124,240,138,.22)';ctx.fillRect(256,8,32,40)}
+ const half=(x,w)=>{if(w<=0)return;R(ctx,x,8,w,40,'#6b6f8f');R(ctx,x,8,w,2,'#8e93ad');for(let y=36;y<44;y+=4)R(ctx,x,y,w,2,'#f2c14e');R(ctx,x,46,w,2,'#3e4170')};
+ half(256,16-o);half(272+o,16-o);if(o===0)R(ctx,271,8,2,40,'#3e4170');
+ R(ctx,291,18,9,14,'#1a1b30');R(ctx,292,19,7,12,'#3e4170');R(ctx,293,20,5,3,roomDone()?'#4fd16a':(Math.sin(t*6)>0?'#ff5a4a':'#7a1d18'));
+ for(let i=0;i<3;i++){R(ctx,293+i*2,25,1,1,'#8e93ad');R(ctx,293+i*2,27,1,1,'#8e93ad')}}
+function drawPlayer(){const x=Math.round(P.x),y=Math.round(P.y),d=P.dir,f=P.moving?Math.floor(P.anim*8)%2:0,bo=P.moving&&f?-1:0;
+ const O='#24253a',Wh='#eef0f5',Sh='#b9bdd0',V='#3fb6d6',Hi='#c9f6ff',Or='#f08a3c';
+ ctx.fillStyle='rgba(10,10,30,.35)';ctx.fillRect(x-5,y-1,10,2);
+ const la=P.moving&&f?1:0,ra=P.moving&&!f?1:0;
+ R(ctx,x-5,y-5-la,5,5,O);R(ctx,x-4,y-4-la,3,3,Wh);R(ctx,x-4,y-2-la,3,1,Sh);R(ctx,x,y-5-ra,5,5,O);R(ctx,x+1,y-4-ra,3,3,Wh);R(ctx,x+1,y-2-ra,3,1,Sh);
+ const b=y+bo;
+ if(d==='right'){R(ctx,x-8,b-11,3,6,O);R(ctx,x-7,b-10,2,4,Or)}if(d==='left'){R(ctx,x+5,b-11,3,6,O);R(ctx,x+5,b-10,2,4,Or)}
+ R(ctx,x-6,b-11,12,7,O);R(ctx,x-5,b-10,10,5,Wh);R(ctx,x-5,b-6,10,1,Sh);if(d==='up')R(ctx,x-4,b-10,8,4,Or);else R(ctx,x-5,b-8,10,1,Or);
+ R(ctx,x-6,b-20,12,10,O);R(ctx,x-7,b-19,14,8,O);R(ctx,x-5,b-19,10,8,Wh);R(ctx,x-6,b-18,12,6,Wh);R(ctx,x-6,b-13,12,1,Sh);
+ if(d==='down'){R(ctx,x-4,b-17,8,4,V);R(ctx,x-3,b-17,2,1,Hi)}else if(d==='right'){R(ctx,x,b-17,5,4,V);R(ctx,x+2,b-17,2,1,Hi)}else if(d==='left'){R(ctx,x-5,b-17,5,4,V);R(ctx,x-4,b-17,2,1,Hi)}
+ R(ctx,x+3,b-23,1,3,O);R(ctx,x+3,b-24,1,1,Math.sin(t*4)>0?'#e0463c':'#f2c14e')}
+function drawBubble(){const x=Math.round(P.x)-5,y=Math.round(P.y)-35+(Math.sin(t*5)>0?0:1);
+ R(ctx,x,y,11,10,'#3b2412');R(ctx,x+1,y+1,9,8,'#f6e3b4');R(ctx,x+4,y+10,3,1,'#3b2412');R(ctx,x+5,y+11,1,1,'#3b2412');
+ ['111','100','110','100','111'].forEach((r,j)=>[...r].forEach((c,i)=>{if(c==='1')R(ctx,x+4+i,y+2+j,1,1,'#3b2412')}))}
+function draw(){
+ ctx.drawImage(bg,0,0);room.wallDyn();if(room.door)drawDoor();room.floorDyn();
+ [...room.tall(),{y:P.y,d:drawPlayer}].sort((a,b)=>a.y-b.y).forEach(o=>o.d());
+ for(const p of parts){ctx.globalAlpha=Math.max(0,p.life/p.max);R(ctx,p.x,p.y,p.s,p.s,p.col)}ctx.globalAlpha=1;
+ ctx.globalAlpha=roomDone()?.45:.9;ctx.drawImage(vig,0,0);ctx.globalAlpha=1;
+ room.ambient();
+ if(S.mode==='play'&&near)drawBubble();
+ if(S.fade>0){ctx.fillStyle=`rgba(5,6,18,${S.fade})`;ctx.fillRect(0,0,W,H)}}
+
+function showWin(){S.mode='end';const s=Math.floor(S.el),st=S.errors<=3?3:S.errors<=7?2:1;
+ $('winStars').innerHTML='★'.repeat(st)+`<span class="off">${'★'.repeat(3-st)}</span>`;$('winStars').setAttribute('aria-label',st+' stelle su 3');
+ $('winStats').innerHTML=`Tempo <b>${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}</b> · Risposte sbagliate: <b>${S.errors}</b>`;$('win').hidden=false;beep([523,659,784,1047,1319],.1);$('again').focus()}
+const startRoom=(()=>{const m=location.hash.match(/^#stanza([1-4])$/);return m?+m[1]-1:0})();
+function reset(){S={ri:0,solved:{},notes:{},tries:{},errors:0,el:0,mode:'start',doorO:0,doorOpening:false,boss:0,bossTalk:false,jumpT:0,fade:0,won:false};
+ lastSec=-1;$('win').hidden=true;$('pz').hidden=true;$('dlg').hidden=true;cur=null;loadRoom(0)}
+function begin(){if(S.mode!=='start')return;$('start').hidden=true;beep([440],.05,'square',.02);if(startRoom){loadRoom(startRoom)}say(room.intro)}
+reset();
+let last=performance.now();
+function frame(now){const dt=Math.min(.05,(now-last)/1000);last=now;update(dt);draw();requestAnimationFrame(frame)}
+requestAnimationFrame(frame);
+}
+</script>
+</body>
+</html>
